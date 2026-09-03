@@ -5,7 +5,7 @@ def save_user_profile(data):
     conn = get_connection()
     cursor = conn.cursor()
     
-    # Força o salvamento garantindo o ID 1 para manter um único perfil consistente
+    # Força a gravação estrita no ID 1, garantindo que sempre exista um único perfil fixo e salvo
     cursor.execute("""
         INSERT OR REPLACE INTO users (
             id, name, age, sex, weight, height, goal, experience, 
@@ -25,6 +25,7 @@ def save_user_profile(data):
 def get_user_profile():
     conn = get_connection()
     cursor = conn.cursor()
+    # Busca estritamente o perfil de ID 1 salvo no banco
     cursor.execute("SELECT * FROM users WHERE id = 1")
     row = cursor.fetchone()
     conn.close()
