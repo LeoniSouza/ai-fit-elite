@@ -10,10 +10,10 @@ def get_analytics_summary(user_id):
         JOIN workout_exercises we ON sl.workout_exercise_id = we.id
     """, conn)
     conn.close()
-    
+
     total_workouts = len(workouts_df[workouts_df["completed"] == 1]) if not workouts_df.empty else 0
     total_volume = (sets_df["weight"] * sets_df["reps"]).sum() if not sets_df.empty else 0
-    
+
     return {
         "total_workouts": total_workouts,
         "total_volume": total_volume,
