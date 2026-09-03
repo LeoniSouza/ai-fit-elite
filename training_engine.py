@@ -1,13 +1,28 @@
 import datetime
 from database import get_connection
 
+def determine_weekly_split(frequency, goal):
+    """Define a divisão semanal de acordo com a frequência disponível do aluno."""
+    if frequency <= 2:
+        return ["Full Body A", "Full Body B"]
+    elif frequency == 3:
+        return ["Full Body A", "Full Body B", "Full Body C"]
+    elif frequency == 4:
+        return ["Upper A (Superior)", "Lower A (Inferior)", "Upper B (Superior)", "Lower B (Inferior)"]
+    elif frequency == 5:
+        return ["Upper A", "Lower A", "Upper B", "Lower B", "Sessão Complementar / Core"]
+    else:
+        return ["Push (Empurrar)", "Pull (Puxar)", "Legs (Pernas)", "Upper (Superior)", "Lower (Inferior)", "Full Body Técnico"]
+
 def generate_workout(profile, history=None):
     conn = get_connection()
     cursor = conn.cursor()
     
     goal = profile.get("goal", "Hipertrofia")
     level = profile.get("experience", "Intermediário")
+    frequency = profile.get("frequency", 4)
     
+    # Seleção inteligente baseada em grupamentos
     cursor.execute("""
         SELECT id, name, muscle_group, suggested_sets, rep_range, rest_time 
         FROM exercises 
@@ -18,11 +33,21 @@ def generate_workout(profile, history=None):
     exercises = cursor.fetchall()
     conn.close()
     
+    splits = determine_weekly_split(frequency, goal)
+    # Seleciona o treino do ciclo com base no histórico de treinos concluídos
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT COUNT(*) FROM workouts WHERE user_id = 1 AND completed = 1")
+    completed_count = cursor.fetchone()[0]
+    conn.close()
+    
+    current_split_name = splits[completed_count % len(splits)]
+    
     workout_plan = {
-        "workout_name": f"Treino Adaptativo - {goal} ({profile.get('frequency')}x/sem)",
+        "workout_name": f"{current_split_name} - Foco: {goal}",
         "exercises": [dict(ex) for ex in exercises],
         "rur_target": "1-2 RIR",
-        "notes": "Foque na qualidade de execução."
+        "notes": f"Nível de Experiência: {level}. Priorize controle excêntrico e execução técnica."
     }
     return workout_plan
 
