@@ -10,8 +10,10 @@ st.set_page_config(page_title="AI FIT ELITE", page_icon="⚡", layout="wide")
 
 init_db()
 
+# 1. Busca o perfil atual do banco de dados
 profile = get_user_profile()
 
+# 2. Define se o sistema está liberado com base nos termos aceitos
 if "sistema_liberado" not in st.session_state:
     st.session_state.sistema_liberado = bool(profile and profile.get("terms_accepted"))
 elif profile and profile.get("terms_accepted"):
@@ -19,13 +21,13 @@ elif profile and profile.get("terms_accepted"):
 
 st.sidebar.title("⚡ AI FIT ELITE")
 
+# 3. Gerenciamento do Menu Lateral baseado estritamente na liberação
 if not st.session_state.sistema_liberado:
     st.sidebar.warning("⚠️ Conclua o Perfil e Anamnese para liberar o sistema.")
     menu = "Meu Perfil"
 else:
     options = ["Dashboard", "Meu Perfil", "Treino de Hoje", "Ficha de Treino Atual", "Histórico", "Evolução", "Configurações"]
-    default_idx = 0
-    menu = st.sidebar.radio("Navegação", options, index=default_idx)
+    menu = st.sidebar.radio("Navegação", options)
 
 st.sidebar.divider()
 st.sidebar.subheader("🚨 Relatar Dor")
@@ -50,6 +52,7 @@ if st.sidebar.button("Enviar para Restrições"):
     else:
         st.sidebar.warning("Digite algo antes de enviar.")
 
+# --- TELA: DASHBOARD ---
 if menu == "Dashboard":
     st.title("📊 Painel de Controle Principal")
     if not profile or not profile.get("terms_accepted"):
@@ -68,86 +71,95 @@ if menu == "Dashboard":
         if profile.get('restrictions'):
             st.error(f"⚠️ **Restrições/Dores:** {profile.get('restrictions')}")
 
+# --- TELA: MEU PERFIL ---
 elif menu == "Meu Perfil":
     st.title("👤 Avaliação Inicial, Anamnese e Termos")
-    st.info("ℹ️ **Diretrizes de Anamnese:** Preencha com atenção todas as informações abaixo. Esses dados alimentam o motor adaptativo de treinos.")
+    st.info("ℹ️ **Diretrizes de Anamnese:** Preencha com atenção todas as informações abaixo. Esses dados alimentam o motor adaptativo de treinos com segurança e precisão.")
     
     curr = profile or {}
     
-    # Controle de edição para quem já tem perfil salvo
-    editavel = True
-    if curr and curr.get("terms_accepted"):
-        if "editando_perfil" not in st.session_state:
-            st.session_state.editando_perfil = False
+    # Gerencia se os campos estão editáveis ou bloqueados após o primeiro cadastro
+    if "editando_perfil" not in st.session_state:
+        st.session_state.editando_perfil = False
+
+    # Se já tem perfil salvo e não está editando, mostra os dados salvos e o botão de alterar
+    if curr and curr.get("terms_accepted") and not st.session_state.editando_perfil:
+        st.success("✅ Perfil salvo e ativo no sistema!")
+        if st.button("✏️ Alterar Informações do Perfil"):
+            st.session_state.editando_perfil = True
+            st.rerun()
             
-        if not st.session_state.editando_perfil:
-            editavel = False
-            st.success("✅ Perfil cadastrado e salvo com sucesso!")
-            if st.button("✏️ Alterar Informações do Perfil"):
-                st.session_state.editando_perfil = True
-                st.rerun()
-        else:
+        st.divider()
+        st.write(f"**Nome:** {curr.get('name')}")
+        st.write(f"**Idade:** {curr.get('age')} anos | **Sexo:** {curr.get('sex')} | **Peso:** {curr.get('weight')} kg | **Altura:** {curr.get('height')} m")
+        st.write(f"**Objetivo:** {curr.get('goal')} | **Experiência:** {curr.get('experience')}")
+        st.write(f"**Frequência:** {curr.get('frequency')} dias/sem | **Duração:** {curr.get('duration')} min | **Equipamentos:** {curr.get('equipment')}")
+        st.write(f"**Sono:** {curr.get('sleep_quality')} | **Disposição:** {curr.get('disposition')} | **Recuperação:** {curr.get('recovery_quality')}")
+        st.write(f"**Restrições:** {curr.get('restrictions') or 'Nenhuma'}")
+    
+    else:
+        # Formulário ativo para preenchimento ou edição
+        if curr and curr.get("terms_accepted"):
             if st.button("❌ Cancelar Edição"):
                 st.session_state.editando_perfil = False
                 st.rerun()
 
-    with st.form("profile_form"):
-        name = st.text_input("Nome Completo *", value=curr.get("name", ""), disabled=not editavel)
-        c1, c2, c3 = st.columns(3)
-        with c1:
-            age = st.number_input("Idade *", value=int(curr.get("age", 25)), disabled=not editavel)
-        with c2:
-            sex_opts = ["Masculino", "Feminino", "Outro"]
-            sex_idx = sex_opts.index(curr.get("sex")) if curr.get("sex") in sex_opts else 0
-            sex = st.selectbox("Sexo *", sex_opts, index=sex_idx, disabled=not editavel)
-        with c3:
-            weight = st.number_input("Peso (kg) *", value=float(curr.get("weight", 70.0)), disabled=not editavel)
+        with st.form("profile_form"):
+            name = st.text_input("Nome Completo *", value=curr.get("name", ""))
+            c1, c2, c3 = st.columns(3)
+            with c1:
+                age = st.number_input("Idade *", value=int(curr.get("age", 25)))
+            with c2:
+                sex_opts = ["Masculino", "Feminino", "Outro"]
+                sex_idx = sex_opts.index(curr.get("sex")) if curr.get("sex") in sex_opts else 0
+                sex = st.selectbox("Sexo *", sex_opts, index=sex_idx)
+            with c3:
+                weight = st.number_input("Peso (kg) *", value=float(curr.get("weight", 70.0)))
+                
+            c4, c5 = st.columns(2)
+            with c4:
+                height = st.number_input("Altura (m) *", value=float(curr.get("height", 1.75)))
+            with c5:
+                goal_options = ["Hipertrofia", "Emagrecimento e definição", "Condicionamento físico", "Treinamento de força", "Desenvolvimento físico geral"]
+                goal_idx = goal_options.index(curr.get("goal")) if curr.get("goal") in goal_options else 0
+                goal = st.selectbox("Objetivo Principal *", goal_options, index=goal_idx)
+                
+            exp_options = ["Iniciante", "Intermediário", "Avançado"]
+            exp_idx = exp_options.index(curr.get("experience")) if curr.get("experience") in exp_options else 0
+            experience = st.selectbox("Nível de Experiência *", exp_options, index=exp_idx)
             
-        c4, c5 = st.columns(2)
-        with c4:
-            height = st.number_input("Altura (m) *", value=float(curr.get("height", 1.75)), disabled=not editavel)
-        with c5:
-            goal_options = ["Hipertrofia", "Emagrecimento e definição", "Condicionamento físico", "Treinamento de força", "Desenvolvimento físico geral"]
-            goal_idx = goal_options.index(curr.get("goal")) if curr.get("goal") in goal_options else 0
-            goal = st.selectbox("Objetivo Principal *", goal_options, index=goal_idx, disabled=not editavel)
+            c6, c7 = st.columns(2)
+            with c6:
+                frequency = st.slider("Dias por semana *", 1, 7, value=int(curr.get("frequency", 4)))
+            with c7:
+                duration = st.slider("Minutos por sessão *", 30, 120, value=int(curr.get("duration", 60)))
+                
+            eq_options = ["Academia completa", "Home Gym", "Peso Corporal"]
+            eq_idx = eq_options.index(curr.get("equipment")) if curr.get("equipment") in eq_options else 0
+            equipment = st.selectbox("Equipamentos *", eq_options, index=eq_idx)
             
-        exp_options = ["Iniciante", "Intermediário", "Avançado"]
-        exp_idx = exp_options.index(curr.get("experience")) if curr.get("experience") in exp_options else 0
-        experience = st.selectbox("Nível de Experiência *", exp_options, index=exp_idx, disabled=not editavel)
-        
-        c6, c7 = st.columns(2)
-        with c6:
-            frequency = st.slider("Dias por semana *", 1, 7, value=int(curr.get("frequency", 4)), disabled=not editavel)
-        with c7:
-            duration = st.slider("Minutos por sessão *", 30, 120, value=int(curr.get("duration", 60)), disabled=not editavel)
+            st.divider()
+            st.subheader("🛌 Anamnese")
+            c8, c9, c10 = st.columns(3)
+            with c8:
+                sleep_options = ["Excelente", "Boa", "Regular", "Ruim"]
+                sleep_idx = sleep_options.index(curr.get("sleep_quality")) if curr.get("sleep_quality") in sleep_options else 0
+                sleep = st.selectbox("Sono *", sleep_options, index=sleep_idx)
+            with c9:
+                disp_options = ["Alto", "Moderado", "Baixo"]
+                disp_idx = disp_options.index(curr.get("disposition")) if curr.get("disposition") in disp_options else 0
+                disposition = st.selectbox("Disposição *", disp_options, index=disp_idx)
+            with c10:
+                rec_options = ["Rápida", "Normal", "Lenta"]
+                rec_idx = rec_options.index(curr.get("recovery_quality")) if curr.get("recovery_quality") in rec_options else 0
+                recovery = st.selectbox("Recuperação *", rec_options, index=rec_idx)
+                
+            restrictions = st.text_area("Restrições ou lesões", value=curr.get("restrictions", ""))
             
-        eq_options = ["Academia completa", "Home Gym", "Peso Corporal"]
-        eq_idx = eq_options.index(curr.get("equipment")) if curr.get("equipment") in eq_options else 0
-        equipment = st.selectbox("Equipamentos *", eq_options, index=eq_idx, disabled=not editavel)
-        
-        st.divider()
-        st.subheader("🛌 Anamnese")
-        c8, c9, c10 = st.columns(3)
-        with c8:
-            sleep_options = ["Excelente", "Boa", "Regular", "Ruim"]
-            sleep_idx = sleep_options.index(curr.get("sleep_quality")) if curr.get("sleep_quality") in sleep_options else 0
-            sleep = st.selectbox("Sono *", sleep_options, index=sleep_idx, disabled=not editavel)
-        with c9:
-            disp_options = ["Alto", "Moderado", "Baixo"]
-            disp_idx = disp_options.index(curr.get("disposition")) if curr.get("disposition") in disp_options else 0
-            disposition = st.selectbox("Disposição *", disp_options, index=disp_idx, disabled=not editavel)
-        with c10:
-            rec_options = ["Rápida", "Normal", "Lenta"]
-            rec_idx = rec_options.index(curr.get("recovery_quality")) if curr.get("recovery_quality") in rec_options else 0
-            recovery = st.selectbox("Recuperação *", rec_options, index=rec_idx, disabled=not editavel)
+            st.divider()
+            terms_accepted = st.checkbox("Li e aceito os termos de responsabilidade e uso do sistema. *", value=bool(curr.get("terms_accepted", 0)))
             
-        restrictions = st.text_area("Restrições ou lesões", value=curr.get("restrictions", ""), disabled=not editavel)
-        
-        st.divider()
-        terms_accepted = st.checkbox("Li e aceito os termos de responsabilidade e uso do sistema. *", value=bool(curr.get("terms_accepted", 0)), disabled=not editavel)
-        
-        if editavel:
-            submitted = st.form_submit_button("Salvar Perfil e Atualizar Sistema")
+            submitted = st.form_submit_button("Salvar Perfil e Ir para o Dashboard")
             
             if submitted:
                 if not name.strip():
@@ -167,6 +179,7 @@ elif menu == "Meu Perfil":
                     st.success("Perfil salvo com sucesso!")
                     st.rerun()
 
+# --- TELA: TREINO DE HOJE ---
 elif menu == "Treino de Hoje":
     st.title("🏋️ Execução do Treino Adaptativo")
     uid = profile.get("id", 1) if profile else 1
@@ -208,6 +221,7 @@ elif menu == "Treino de Hoje":
             st.rerun()
     conn.close()
 
+# --- TELA: FICHA DE TREINO ATUAL ---
 elif menu == "Ficha de Treino Atual":
     st.title("📋 Ficha de Treino Ativa")
     uid = profile.get("id", 1) if profile else 1
@@ -226,6 +240,7 @@ elif menu == "Ficha de Treino Atual":
             st.markdown(f"**{idx}. {ex['name']}** ({ex['muscle_group']}) — {ex['target_sets']}x{ex['target_reps']}")
     conn.close()
 
+# --- TELA: HISTÓRICO ---
 elif menu == "Histórico":
     st.title("📜 Histórico")
     uid = profile.get("id", 1) if profile else 1
@@ -234,6 +249,7 @@ elif menu == "Histórico":
     conn.close()
     st.dataframe(df, use_container_width=True)
 
+# --- TELA: EVOLUÇÃO ---
 elif menu == "Evolução":
     st.title("📈 Evolução de Peso")
     uid = profile.get("id", 1) if profile else 1
@@ -247,6 +263,7 @@ elif menu == "Evolução":
     if not df_m.empty:
         st.line_chart(df_m, x="date", y="weight")
 
+# --- TELA: CONFIGURAÇÕES ---
 elif menu == "Configurações":
     st.title("⚙️ Configurações")
     st.write("Sistema operacional estável.")
