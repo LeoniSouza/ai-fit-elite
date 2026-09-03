@@ -9,12 +9,15 @@ st.set_page_config(page_title="AI FIT ELITE", page_icon="⚡", layout="wide")
 
 init_db()
 
-# Local de alteração 1: Gerenciamento de Estado para liberação imediata
-if "sistema_liberado" not in st.session_state:
-    perfil_salvo = get_user_profile()
-    st.session_state.sistema_liberado = bool(perfil_salvo and perfil_salvo.get("terms_accepted"))
+# Garante que o perfil seja lido logo no início do app
+profile = get_user_profile()
 
-if not st.session_state.sistema_liberado:
+if "sistema_liberado" not in st.session_state:
+    st.session_state.sistema_liberado = bool(profile and profile.get("terms_accepted"))
+
+st.sidebar.title("⚡ AI FIT ELITE")
+
+if not st.sidebar.sistema_liberado if hasattr(st.sidebar, 'sistema_liberado') else not st.session_state.sistema_liberado:
     st.sidebar.warning("⚠️ Conclua o Perfil e Anamnese para liberar o sistema.")
     menu = "Meu Perfil"
 else:
@@ -30,12 +33,15 @@ if st.sidebar.button("Enviar para Restrições"):
     if dor_input:
         conn = get_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT restrictions FROM users WHERE id = 1")
-        res_atual = cursor.fetchone()
-        atual_rest = res_atual["restrictions"] if res_atual and res_atual["restrictions"] else ""
-        nova_rest = f"{atual_rest} | Relato: {dor_input}" if atual_rest else f"Relato: {dor_input}"
-        cursor.execute("UPDATE users SET restrictions = ? WHERE id = 1", (nova_rest,))
-        conn.commit()
+        cursor.execute("SELECT id, restrictions FROM users WHERE id = 1")
+        user_res = cursor.fetchone()
+        
+        if user_res:
+            uid = user_res["id"]
+            atual_rest = user_res["restrictions"] if user_res["restrictions"] else ""
+            nova_rest = f"{atual_rest} | Relato: {dor_input}" if atual_rest else f"Relato: {dor_input}"
+            cursor.execute("UPDATE users SET restrictions = ? WHERE id = ?", (nova_rest, uid))
+            conn.commit()
         conn.close()
         st.sidebar.success("Adicionado às restrições!")
         st.rerun()
@@ -44,10 +50,10 @@ if st.sidebar.button("Enviar para Restrições"):
 
 if menu == "Dashboard":
     st.title("📊 Painel de Controle Principal")
-    if not profile:
-        st.warning("⚠️ Vá até a aba **Meu Perfil** para cadastrar seus dados.")
+    if not profile or not profile.get("terms_accepted"):
+        st.warning("⚠️ Vá até a aba **Meu Perfil**, preencha os dados e aceite os termos para liberar o sistema.")
     else:
-        summary = get_analytics_summary(1)
+        summary = get_analytics_summary(profile.get("id", 1))
         col1, col2, col3, col4 = st.columns(4)
         col1.metric("Treinos Realizados", summary["total_workouts"])
         col2.metric("Volume Total (kg)", f"{summary['total_volume']:,.1f}")
@@ -62,6 +68,9 @@ if menu == "Dashboard":
 
 elif menu == "Meu Perfil":
     st.title("👤 Avaliação Inicial, Anamnese e Termos")
+    
+    st.info("ℹ️ **Diretrizes de Anamnese:** Preencha com atenção todas as informações abaixo sobre seu histórico, sono, disposição e eventuais restrições físicas. Esses dados são fundamentais para que o motor adaptativo calcule cargas e restrições com segurança e precisão para o seu perfil.")
+    
     curr = profile or {}
     
     with st.form("profile_form"):
@@ -70,7 +79,7 @@ elif menu == "Meu Perfil":
         with c1:
             age = st.number_input("Idade *", value=int(curr.get("age", 25)))
         with c2:
-            sex = st.selectbox("Sexo *", ["Masculino", "Feminino", "Outro"])
+            sex = st.selectbox("Sexo *", ["Masculino", "Feminino", "Outro"], index=["Masculino", "Feminino", "Outro"].index(curr.get("sex")) if curr.get("sex") in ["Masculino", "Feminino", "Outro"] else 0)
         with c3:
             weight = st.number_input("Peso (kg) *", value=float(curr.get("weight", 70.0)))
             
@@ -78,9 +87,11 @@ elif menu == "Meu Perfil":
         with c4:
             height = st.number_input("Altura (m) *", value=float(curr.get("height", 1.75)))
         with c5:
-            goal = st.selectbox("Objetivo Principal *", ["Hipertrofia", "Emagrecimento e definição", "Condicionamento físico", "Treinamento de força", "Desenvolvimento físico geral"])
+            goal_options = ["Hipertrofia", "Emagrecimento e definição", "Condicionamento físico", "Treinamento de força", "Desenvolvimento físico geral"]
+            goal = st.selectbox("Objetivo Principal *", goal_options, index=goal_options.index(curr.get("goal")) if curr.get("goal") in goal_options else 0)
             
-        experience = st.selectbox("Nível de Experiência *", ["Iniciante", "Intermediário", "Avançado"])
+        exp_options = ["Iniciante", "Intermediário", "Avançado"]
+        experience = st.selectbox("Nível de Experiência *", exp_options, index=exp_options.index(curr.get("experience")) if curr.get("experience") in exp_options else 0)
         
         c6, c7 = st.columns(2)
         with c6:
@@ -88,17 +99,21 @@ elif menu == "Meu Perfil":
         with c7:
             duration = st.slider("Minutos por sessão *", 30, 120, value=int(curr.get("duration", 60)))
             
-        equipment = st.selectbox("Equipamentos *", ["Academia completa", "Home Gym", "Peso Corporal"])
+        eq_options = ["Academia completa", "Home Gym", "Peso Corporal"]
+        equipment = st.selectbox("Equipamentos *", eq_options, index=eq_options.index(curr.get("equipment")) if curr.get("equipment") in eq_options else 0)
         
         st.divider()
         st.subheader("🛌 Anamnese")
         c8, c9, c10 = st.columns(3)
         with c8:
-            sleep = st.selectbox("Sono *", ["Excelente", "Boa", "Regular", "Ruim"])
+            sleep_options = ["Excelente", "Boa", "Regular", "Ruim"]
+            sleep = st.selectbox("Sono *", sleep_options, index=sleep_options.index(curr.get("sleep_quality")) if curr.get("sleep_quality") in sleep_options else 0)
         with c9:
-            disposition = st.selectbox("Disposição *", ["Alto", "Moderado", "Baixo"])
+            disp_options = ["Alto", "Moderado", "Baixo"]
+            disposition = st.selectbox("Disposição *", disp_options, index=disp_options.index(curr.get("disposition")) if curr.get("disposition") in disp_options else 0)
         with c10:
-            recovery = st.selectbox("Recuperação *", ["Rápida", "Normal", "Lenta"])
+            rec_options = ["Rápida", "Normal", "Lenta"]
+            recovery = st.selectbox("Recuperação *", rec_options, index=rec_options.index(curr.get("recovery_quality")) if curr.get("recovery_quality") in rec_options else 0)
             
         restrictions = st.text_area("Restrições ou lesões", value=curr.get("restrictions", ""))
         
@@ -121,21 +136,22 @@ elif menu == "Meu Perfil":
                     "terms_accepted": 1
                 })
                 st.session_state.sistema_liberado = True
-                st.success("Salvo com sucesso!")
+                st.success("Salvo com sucesso! Avançando para a próxima etapa...")
                 st.rerun()
 
 elif menu == "Treino de Hoje":
     st.title("🏋️ Execução do Treino Adaptativo")
+    uid = profile.get("id", 1) if profile else 1
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM workouts WHERE user_id = 1 AND completed = 0 ORDER BY id DESC LIMIT 1")
+    cursor.execute("SELECT * FROM workouts WHERE user_id = ? AND completed = 0 ORDER BY id DESC LIMIT 1", (uid,))
     workout_row = cursor.fetchone()
     
     if not workout_row:
         st.info("Nenhum treino ativo no momento.")
         if st.button("Gerar Próximo Treino"):
             plan = generate_workout(profile)
-            save_generated_workout(1, plan)
+            save_generated_workout(uid, plan)
             st.success("Gerado!")
             st.rerun()
     else:
@@ -166,9 +182,10 @@ elif menu == "Treino de Hoje":
 
 elif menu == "Ficha de Treino Atual":
     st.title("📋 Ficha de Treino Ativa")
+    uid = profile.get("id", 1) if profile else 1
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM workouts WHERE user_id = 1 AND completed = 0 ORDER BY id DESC LIMIT 1")
+    cursor.execute("SELECT * FROM workouts WHERE user_id = ? AND completed = 0 ORDER BY id DESC LIMIT 1", (uid,))
     active = cursor.fetchone()
     if not active:
         st.info("Nenhum treino ativo.")
@@ -183,20 +200,22 @@ elif menu == "Ficha de Treino Atual":
 
 elif menu == "Histórico":
     st.title("📜 Histórico")
+    uid = profile.get("id", 1) if profile else 1
     conn = get_connection()
-    df = pd.read_sql_query("SELECT id, date, workout_name, completed FROM workouts WHERE user_id = 1 ORDER BY date DESC", conn)
+    df = pd.read_sql_query("SELECT id, date, workout_name, completed FROM workouts WHERE user_id = ? ORDER BY date DESC", conn, params=(uid,))
     conn.close()
     st.dataframe(df, use_container_width=True)
 
 elif menu == "Evolução":
     st.title("📈 Evolução de Peso")
+    uid = profile.get("id", 1) if profile else 1
     with st.form("met_form"):
         nw = st.number_input("Novo Peso (kg)", value=float(profile.get("weight", 70.0) if profile else 70.0))
         if st.form_submit_button("Salvar"):
-            add_body_metric(1, datetime.date.today().isoformat(), nw)
+            add_body_metric(uid, datetime.date.today().isoformat(), nw)
             st.success("Salvo!")
             st.rerun()
-    df_m = get_body_metrics(1)
+    df_m = get_body_metrics(uid)
     if not df_m.empty:
         st.line_chart(df_m, x="date", y="weight")
 
