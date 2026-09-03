@@ -121,3 +121,23 @@ def init_db():
         conn.commit()
 
     conn.close()
+
+def get_analytics_summary(user_id):
+    conn = get_connection()
+    workouts_df = pd.read_sql_query("SELECT * FROM workouts WHERE user_id = ?", conn, params=(user_id,))
+    sets_df = pd.read_sql_query("""
+        SELECT sl.*, we.workout_id 
+        FROM sets_log sl
+        JOIN workout_exercises we ON sl.workout_exercise_id = we.id
+    """, conn)
+    conn.close()
+    
+    total_workouts = len(workouts_df[workouts_df["completed"] == 1]) if not workouts_df.empty else 0
+    total_volume = (sets_df["weight"] * sets_df["reps"]).sum() if not sets_df.empty else 0
+    
+    return {
+        "total_workouts": total_workouts,
+        "total_volume": total_volume,
+        "workouts_df": workouts_df,
+        "sets_df": sets_df
+    }
