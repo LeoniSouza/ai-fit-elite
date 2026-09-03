@@ -4,15 +4,37 @@ from database import get_connection
 def save_user_profile(data):
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM users")
-    cursor.execute("""
-        INSERT INTO users (name, age, sex, weight, height, goal, experience, frequency, duration, equipment, sleep_quality, disposition, recovery_quality, restrictions, terms_accepted)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (
-        data["name"], data["age"], data["sex"], data["weight"], data["height"],
-        data["goal"], data["experience"], data["frequency"], data["duration"], data["equipment"],
-        data["sleep_quality"], data["disposition"], data["recovery_quality"], data["restrictions"], data["terms_accepted"]
-    ))
+    
+    # Verifica se já existe usuário cadastrado
+    cursor.execute("SELECT id FROM users LIMIT 1")
+    user = cursor.fetchone()
+    
+    if user:
+        # Atualiza o perfil existente mantendo a consistência
+        cursor.execute("""
+            UPDATE users SET 
+                name = ?, age = ?, sex = ?, weight = ?, height = ?, 
+                goal = ?, experience = ?, frequency = ?, duration = ?, 
+                equipment = ?, sleep_quality = ?, disposition = ?, 
+                recovery_quality = ?, restrictions = ?, terms_accepted = ?
+            WHERE id = ?
+        """, (
+            data["name"], data["age"], data["sex"], data["weight"], data["height"],
+            data["goal"], data["experience"], data["frequency"], data["duration"], data["equipment"],
+            data["sleep_quality"], data["disposition"], data["recovery_quality"], data["restrictions"], 
+            data["terms_accepted"], user["id"]
+        ))
+    else:
+        # Insere se não existir
+        cursor.execute("""
+            INSERT INTO users (name, age, sex, weight, height, goal, experience, frequency, duration, equipment, sleep_quality, disposition, recovery_quality, restrictions, terms_accepted)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            data["name"], data["age"], data["sex"], data["weight"], data["height"],
+            data["goal"], data["experience"], data["frequency"], data["duration"], data["equipment"],
+            data["sleep_quality"], data["disposition"], data["recovery_quality"], data["restrictions"], data["terms_accepted"]
+        ))
+        
     conn.commit()
     conn.close()
 
