@@ -5,12 +5,10 @@ def save_user_profile(data):
     conn = get_connection()
     cursor = conn.cursor()
     
-    # Verifica se já existe algum perfil cadastrado
     cursor.execute("SELECT id FROM users LIMIT 1")
     user = cursor.fetchone()
     
     if user:
-        # Atualiza o perfil existente garantindo o ID correto
         cursor.execute("""
             UPDATE users SET 
                 name = ?, age = ?, sex = ?, weight = ?, height = ?, 
@@ -25,18 +23,10 @@ def save_user_profile(data):
             data["terms_accepted"], user["id"]
         ))
     else:
-        # Insere o primeiro perfil se a tabela estiver vazia
         cursor.execute("""
             INSERT INTO users (name, age, sex, weight, height, goal, experience, frequency, duration, equipment, sleep_quality, disposition, recovery_quality, restrictions, terms_accepted)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
-            data["name"], data["age"], data["sex"], data["weight"], data["height"],
-            data["goal"], data["experience"], data["frequency"], data["duration"], data["equipment"],
-            data["sleep_quality"], data["disposition"], data["recovery_quality"], data["restrictions"], data["terms_accepted"]
-        ))
-        
-    conn.commit()
-    conn.close()
             data["name"], data["age"], data["sex"], data["weight"], data["height"],
             data["goal"], data["experience"], data["frequency"], data["duration"], data["equipment"],
             data["sleep_quality"], data["disposition"], data["recovery_quality"], data["restrictions"], data["terms_accepted"]
