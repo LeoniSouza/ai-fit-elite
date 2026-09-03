@@ -9,33 +9,39 @@ st.set_page_config(page_title="AI FIT ELITE", page_icon="⚡", layout="wide")
 
 init_db()
 
+# Gerenciamento de Estado para garantir a liberação imediata pós-salvamento
+if "sistema_liberado" not in st.session_state:
+    perfil_salvo = get_user_profile()
+    st.session_state.sistema_liberado = bool(perfil_salvo and perfil_salvo.get("terms_accepted"))
+
 profile = get_user_profile()
 
 st.sidebar.title("⚡ AI FIT ELITE")
 
-# Se não houver perfil salvo, força a navegação direto para a aba de cadastro/perfil
-if not profile or not profile.get("terms_accepted"):
-    st.sidebar.warning("⚠️ Conclua o Perfil e Anamnese.")
+# Se o sistema não estiver liberado, força a aba de Perfil
+if not st.session_state.sistema_liberado:
+    st.sidebar.warning("⚠️ Conclua o Perfil e Anamnese para liberar o sistema.")
     menu = "Meu Perfil"
 else:
     menu = st.sidebar.radio("Navegação", [
         "Dashboard", "Meu Perfil", "Treino de Hoje", "Ficha de Treino Atual", "Histórico", "Evolução", "Configurações"
     ])
 
-# Integração do relato de dor diretamente salvando nas restrições do perfil
+# Integração automática: Relatar dor na barra lateral atualiza diretamente as restrições
 safety_input = st.sidebar.text_input("Relatar dor ou condição física:", placeholder="Ex: Dor no joelho...")
 if safety_input and profile:
     is_unsafe, warning_msg = check_safety_guidelines(safety_input)
     if is_unsafe:
         st.sidebar.error(warning_msg)
-    # Atualiza automaticamente as restrições no banco com o relato de dor
+    
     current_restrictions = profile.get("restrictions", "") or ""
-    new_restriction = f"{current_restrictions} | Alerta recente: {safety_input}" if current_restrictions else f"Alerta recente: {safety_input}"
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("UPDATE users SET restrictions = ? WHERE id = 1", (new_restriction,))
-    conn.commit()
-    conn.close()
+    if safety_input not in current_restrictions:
+        new_restriction = f"{current_restrictions} | Relato lateral: {safety_input}" if current_restrictions else f"Relato lateral: {safety_input}"
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("UPDATE users SET restrictions = ? WHERE id = 1", (new_restriction,))
+        conn.commit()
+        conn.close()
 
 # ---------------------------------------------------------
 # 1. DASHBOARD
@@ -54,7 +60,7 @@ if menu == "Dashboard":
         st.subheader("📋 Resumo do Perfil e Anamnese")
         st.write(f"**Nome:** {profile.get('name')} | **Experiência:** {profile.get('experience')} | **Frequência:** {profile.get('frequency')}x/sem")
         if profile.get('restrictions'):
-            st.warning(f"⚠️ **Restrições / Limitações:** {profile.get('restrictions')}")
+            st.warning(f"⚠️ **Restrições / Lesões / Dores:** {profile.get('restrictions')}")
 
 # ---------------------------------------------------------
 # 2. MEU PERFIL
@@ -102,7 +108,7 @@ elif menu == "Meu Perfil":
         with c10:
             recovery = st.selectbox("Recuperação *", ["Rápida", "Normal", "Lenta"])
             
-        restrictions = st.text_area("Restrições ou lesões", value=curr.get("restrictions", ""))
+        restrictions = st.text_area("Restrições ou lesões (Atualiza automaticamente com relatos de dor)", value=curr.get("restrictions", ""))
         
         st.divider()
         terms_accepted = st.checkbox("Li e aceito os termos de responsabilidade e uso do sistema. *", value=bool(curr.get("terms_accepted", 0)))
@@ -122,6 +128,7 @@ elif menu == "Meu Perfil":
                     "disposition": disposition, "recovery_quality": recovery, "restrictions": restrictions,
                     "terms_accepted": 1
                 })
+                st.session_state.sistema_liberado = True
                 st.success("Perfil salvo! Sistema liberado com sucesso.")
                 st.rerun()
 
