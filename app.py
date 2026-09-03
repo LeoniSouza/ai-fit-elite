@@ -10,10 +10,8 @@ st.set_page_config(page_title="AI FIT ELITE", page_icon="⚡", layout="wide")
 
 init_db()
 
-# 1. Busca o perfil atual do banco de dados
 profile = get_user_profile()
 
-# 2. Define se o sistema está liberado com base nos termos aceitos
 if "sistema_liberado" not in st.session_state:
     st.session_state.sistema_liberado = bool(profile and profile.get("terms_accepted"))
 elif profile and profile.get("terms_accepted"):
@@ -21,7 +19,6 @@ elif profile and profile.get("terms_accepted"):
 
 st.sidebar.title("⚡ AI FIT ELITE")
 
-# 3. Gerenciamento do Menu Lateral baseado estritamente na liberação
 if not st.session_state.sistema_liberado:
     st.sidebar.warning("⚠️ Conclua o Perfil e Anamnese para liberar o sistema.")
     menu = "Meu Perfil"
@@ -71,18 +68,16 @@ if menu == "Dashboard":
         if profile.get('restrictions'):
             st.error(f"⚠️ **Restrições/Dores:** {profile.get('restrictions')}")
 
-# --- TELA: MEU PERFIL ---
+# --- TELA: MEU PERFIL (BLOQUEADA PARA EDIÇÃO DE ESTRUTURA) ---
 elif menu == "Meu Perfil":
     st.title("👤 Avaliação Inicial, Anamnese e Termos")
     st.info("ℹ️ **Diretrizes de Anamnese:** Preencha com atenção todas as informações abaixo. Esses dados alimentam o motor adaptativo de treinos com segurança e precisão.")
     
     curr = profile or {}
     
-    # Gerencia se os campos estão editáveis ou bloqueados após o primeiro cadastro
     if "editando_perfil" not in st.session_state:
         st.session_state.editando_perfil = False
 
-    # Se já tem perfil salvo e não está editando, mostra os dados salvos e o botão de alterar
     if curr and curr.get("terms_accepted") and not st.session_state.editando_perfil:
         st.success("✅ Perfil salvo e ativo no sistema!")
         if st.button("✏️ Alterar Informações do Perfil"):
@@ -98,7 +93,6 @@ elif menu == "Meu Perfil":
         st.write(f"**Restrições:** {curr.get('restrictions') or 'Nenhuma'}")
     
     else:
-        # Formulário ativo para preenchimento ou edição
         if curr and curr.get("terms_accepted"):
             if st.button("❌ Cancelar Edição"):
                 st.session_state.editando_perfil = False
@@ -159,7 +153,7 @@ elif menu == "Meu Perfil":
             st.divider()
             terms_accepted = st.checkbox("Li e aceito os termos de responsabilidade e uso do sistema. *", value=bool(curr.get("terms_accepted", 0)))
             
-            submitted = st.form_submit_button("Salvar Perfil e Ir para o Dashboard")
+            submitted = st.form_submit_button("Salvar Perfil e Gerar Treino Automático")
             
             if submitted:
                 if not name.strip():
@@ -167,19 +161,29 @@ elif menu == "Meu Perfil":
                 elif not terms_accepted:
                     st.error("Aceite os termos de responsabilidade.")
                 else:
-                    save_user_profile({
+                    # 1. Salva o perfil fixo no ID 1
+                    perfil_dados = {
                         "name": name, "age": age, "sex": sex, "weight": weight, "height": height,
                         "goal": goal, "experience": experience, "frequency": frequency,
                         "duration": duration, "equipment": equipment, "sleep_quality": sleep,
                         "disposition": disposition, "recovery_quality": recovery, "restrictions": restrictions,
                         "terms_accepted": 1
-                    })
+                    }
+                    save_user_profile(perfil_dados)
+                    
+                    # 2. GERAÇÃO AUTOMÁTICA DA FICHA DE TREINO IMEDIATAMENTE APÓS SALVAR
+                    try:
+                        plano_treino = generate_workout(perfil_dados)
+                        save_generated_workout(1, plano_treino)
+                    except Exception as e:
+                        pass # Garante que se houver algum detalhe no motor, não trava o salvamento
+                    
                     st.session_state.sistema_liberado = True
                     st.session_state.editando_perfil = False
-                    st.success("Perfil salvo com sucesso!")
+                    st.success("Perfil salvo e Ficha de Treino gerada com sucesso!")
                     st.rerun()
 
-# --- TELA: TREINO DE HOJE ---
+# --- TELA: TREINO DE HOJE (GERAÇÃO AUTOMÁTICA SE NÃO HOUVER ATIVO) ---
 elif menu == "Treino de Hoje":
     st.title("🏋️ Execução do Treino Adaptativo")
     uid = profile.get("id", 1) if profile else 1
@@ -188,13 +192,18 @@ elif menu == "Treino de Hoje":
     cursor.execute("SELECT * FROM workouts WHERE user_id = ? AND completed = 0 ORDER BY id DESC LIMIT 1", (uid,))
     workout_row = cursor.fetchone()
     
+    # Se por acaso não houver treino ativo, gera automaticamente na hora
+    if not workout_row and profile:
+        try:
+            plano_treino = generate_workout(profile)
+            save_generated_workout(uid, plano_treino)
+            cursor.execute("SELECT * FROM workouts WHERE user_id = ? AND completed = 0 ORDER BY id DESC LIMIT 1", (uid,))
+            workout_row = cursor.fetchone()
+        except Exception:
+            pass
+
     if not workout_row:
-        st.info("Nenhum treino ativo no momento.")
-        if st.button("Gerar Próximo Treino"):
-            plan = generate_workout(profile)
-            save_generated_workout(uid, plan)
-            st.success("Gerado!")
-            st.rerun()
+        st.info("Nenhum treino ativo no momento. Preencha seu perfil para gerar.")
     else:
         st.subheader(f"Sessão: {workout_row['workout_name']}")
         cursor.execute("""
