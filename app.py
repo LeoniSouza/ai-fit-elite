@@ -61,13 +61,13 @@ if menu == "Dashboard":
         st.warning(f"⚠️ **Restrições / Limitações Informadas:** {profile.get('restrictions')}")
 
 # ---------------------------------------------------------
-# MEU PERFIL (Com indicação exata do que falta)
+# MEU PERFIL (Com marcadores * e depuração)
 # ---------------------------------------------------------
 elif menu == "Meu Perfil":
     st.title("👤 Avaliação Inicial, Anamnese e Termos")
     
     if not profile or not profile.get("terms_accepted"):
-        st.error("🚨 **Atenção:** Preencha todos os campos obrigatórios abaixo e aceite os termos para liberar o sistema.")
+        st.error("🚨 **Atenção:** Preencha todos os campos obrigatórios marcados com **(*)** e aceite os termos para liberar o sistema.")
     
     curr = profile or {}
     
@@ -75,15 +75,15 @@ elif menu == "Meu Perfil":
         name = st.text_input("Nome Completo *", value=curr.get("name", ""))
         c1, c2, c3 = st.columns(3)
         with c1:
-            age = st.number_input("Idade *", value=curr.get("age", 25))
+            age = st.number_input("Idade *", value=int(curr.get("age", 25)))
         with c2:
             sex = st.selectbox("Sexo *", ["Masculino", "Feminino", "Outro"], index=0)
         with c3:
-            weight = st.number_input("Peso (kg) *", value=curr.get("weight", 70.0))
+            weight = st.number_input("Peso (kg) *", value=float(curr.get("weight", 70.0)))
             
         c4, c5 = st.columns(2)
         with c4:
-            height = st.number_input("Altura (m) *", value=curr.get("height", 1.75))
+            height = st.number_input("Altura (m) *", value=float(curr.get("height", 1.75)))
         with c5:
             goal = st.selectbox("Objetivo Principal *", [
                 "Hipertrofia", 
@@ -97,9 +97,9 @@ elif menu == "Meu Perfil":
         
         c6, c7 = st.columns(2)
         with c6:
-            frequency = st.slider("Dias disponíveis por semana *", 1, 7, value=curr.get("frequency", 4))
+            frequency = st.slider("Dias disponíveis por semana *", 1, 7, value=int(curr.get("frequency", 4)))
         with c7:
-            duration = st.slider("Tempo disponível por sessão (min) *", 30, 120, value=curr.get("duration", 60))
+            duration = st.slider("Tempo disponível por sessão (min) *", 30, 120, value=int(curr.get("duration", 60)))
             
         equipment = st.selectbox("Equipamentos / Local de Treinamento *", ["Academia completa", "Home Gym", "Peso Corporal"])
         
@@ -121,20 +121,23 @@ elif menu == "Meu Perfil":
         Declaro que estou apto fisicamente para a prática de exercícios físicos e que as informações prestadas são verdadeiras. 
         O **AI FIT ELITE** é um sistema de suporte tecnológico e não substitui a avaliação ou acompanhamento médico e de profissionais de educação física habilitados.
         """)
-        terms_accepted = st.checkbox("Li e aceito os termos de responsabilidade e uso do sistema. *", value=bool(curr.get("terms_accepted", 0)))
+        
+        # Define o valor inicial do checkbox com base no banco
+        ja_aceito = bool(curr.get("terms_accepted", 0))
+        terms_accepted = st.checkbox("Li e aceito os termos de responsabilidade e uso do sistema. *", value=ja_aceito)
         
         submitted = st.form_submit_button("Salvar Perfil e Liberar Sistema")
         
         if submitted:
-            # Lista de validação detalhada do que falta preencher
+            # Validação detalhada mostrando o status exato de cada regra
             erros = []
-            if not name.strip():
-                erros.append("• O campo **Nome Completo** está vazio.")
+            if not name or not name.strip():
+                erros.append("• O campo **Nome Completo** está vazio (*).")
             if not terms_accepted:
-                erros.append("• Você precisa marcar a caixinha aceitando os **Termos de Responsabilidade**.")
+                erros.append("• Você precisa marcar a caixinha aceitando os **Termos de Responsabilidade** (*).")
                 
             if erros:
-                st.error("❌ **Falta preencher os seguintes campos obrigatórios:**\n\n" + "\n".join(erros))
+                st.error("❌ **Não foi possível avançar por falta de preenchimento:**\n\n" + "\n".join(erros))
             else:
                 save_user_profile({
                     "name": name, "age": age, "sex": sex, "weight": weight, "height": height,
@@ -236,7 +239,7 @@ elif menu == "Histórico":
 elif menu == "Evolução":
     st.title("📈 Acompanhamento de Peso Corporal")
     with st.form("met_form"):
-        nw = st.number_input("Novo Peso (kg)", value=profile.get("weight", 70.0))
+        nw = st.number_input("Novo Peso (kg)", value=float(profile.get("weight", 70.0)))
         if st.form_submit_button("Salvar Medição"):
             add_body_metric(1, datetime.date.today().isoformat(), nw)
             st.success("Salvo com sucesso!")
