@@ -12,9 +12,19 @@ def init_db():
     conn = get_connection()
     cursor = conn.cursor()
 
-    # Recria a tabela com todas as colunas de anamnese e termos obrigatórios
-    cursor.execute("DROP TABLE IF EXISTS users;")
+    # Desativa temporariamente as chaves estrangeiras para permitir a recriação das tabelas
+    cursor.execute("PRAGMA foreign_keys = OFF;")
     
+    cursor.execute("DROP TABLE IF EXISTS users;")
+    cursor.execute("DROP TABLE IF EXISTS body_metrics;")
+    cursor.execute("DROP TABLE IF EXISTS exercises;")
+    cursor.execute("DROP TABLE IF EXISTS workouts;")
+    cursor.execute("DROP TABLE IF EXISTS workout_exercises;")
+    cursor.execute("DROP TABLE IF EXISTS sets_log;")
+    
+    cursor.execute("PRAGMA foreign_keys = ON;")
+
+    # Recria todas as tabelas na ordem correta
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
