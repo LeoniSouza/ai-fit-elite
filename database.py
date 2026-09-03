@@ -1,6 +1,5 @@
 import sqlite3
 import pandas as pd
-from exercise_library import get_initial_exercises
 
 DB_NAME = "ai_fit.db"
 
@@ -25,17 +24,12 @@ def init_db():
             experience TEXT,
             frequency INTEGER,
             duration INTEGER,
-            equipment TEXT
-        )
-    """)
-
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS goals (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER,
-            target_weight REAL,
-            target_date TEXT,
-            FOREIGN KEY (user_id) REFERENCES users (id)
+            equipment TEXT,
+            sleep_quality TEXT,
+            disposition TEXT,
+            recovery_quality TEXT,
+            restrictions TEXT,
+            terms_accepted INTEGER DEFAULT 0
         )
     """)
 
@@ -73,6 +67,7 @@ def init_db():
             date TEXT,
             workout_name TEXT,
             completed INTEGER DEFAULT 0,
+            feedback_notes TEXT,
             FOREIGN KEY (user_id) REFERENCES users (id)
         )
     """)
@@ -106,18 +101,22 @@ def init_db():
 
     conn.commit()
 
+    # Popular exercícios padrão se vazio
     cursor.execute("SELECT COUNT(*) FROM exercises")
     if cursor.fetchone()[0] == 0:
-        exercises = get_initial_exercises()
-        for ex in exercises:
+        default_exs = [
+            ("Supino Reto com Barra", "Peito", "Barra", "Empurrar Horizontal", "Intermediário", "Hipertrofia", "Manter escápulas deprimidas.", 3, "8-12", "90s", "Sim"),
+            ("Remada Curvada com Barra", "Costas", "Barra", "Puxar Horizontal", "Intermediário", "Hipertrofia", "Coluna neutra e cotovelos próximos ao corpo.", 3, "8-12", "90s", "Sim"),
+            ("Agachamento Livre com Barra", "Pernas", "Barra", "Agachamento", "Intermediário", "Hipertrofia", "Profundidade adequada e joelhos alinhados.", 3, "6-10", "120s", "Sim"),
+            ("Desenvolvimento com Halteres", "Ombros", "Halteres", "Empurrar Vertical", "Intermediário", "Hipertrofia", "Evitar hiperlordose lombar.", 3, "8-12", "90s", "Sim"),
+            ("Rosca Direta com Barra", "Bíceps", "Barra", "Flexão de Cotovelo", "Intermediário", "Hipertrofia", "Evitar balanço do tronco.", 3, "10-15", "60s", "Sim"),
+            ("Tríceps na Polia com Corda", "Tríceps", "Cabos", "Extensão de Cotovelo", "Intermediário", "Hipertrofia", "Cotovelos fixos ao lado do corpo.", 3, "10-15", "60s", "Sim")
+        ]
+        for ex in default_exs:
             cursor.execute("""
                 INSERT INTO exercises (name, muscle_group, equipment, movement_pattern, level, goal, instructions, suggested_sets, rep_range, rest_time, progression_possible)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                ex["name"], ex["muscle_group"], ex["equipment"], ex["movement_pattern"],
-                ex["level"], ex["goal"], ex["instructions"], ex["suggested_sets"],
-                ex["rep_range"], ex["rest_time"], ex["progression_possible"]
-            ))
+            """, ex)
         conn.commit()
 
     conn.close()
