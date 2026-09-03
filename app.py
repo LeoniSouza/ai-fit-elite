@@ -9,7 +9,7 @@ st.set_page_config(page_title="AI FIT ELITE", page_icon="⚡", layout="wide")
 
 init_db()
 
-# Gerenciamento de Estado para garantir a liberação imediata pós-salvamento
+# Gerenciamento de Estado para liberação do sistema
 if "sistema_liberado" not in st.session_state:
     perfil_salvo = get_user_profile()
     st.session_state.sistema_liberado = bool(perfil_salvo and perfil_salvo.get("terms_accepted"))
@@ -18,7 +18,6 @@ profile = get_user_profile()
 
 st.sidebar.title("⚡ AI FIT ELITE")
 
-# Se o sistema não estiver liberado, força a aba de Perfil
 if not st.session_state.sistema_liberado:
     st.sidebar.warning("⚠️ Conclua o Perfil e Anamnese para liberar o sistema.")
     menu = "Meu Perfil"
@@ -27,40 +26,70 @@ else:
         "Dashboard", "Meu Perfil", "Treino de Hoje", "Ficha de Treino Atual", "Histórico", "Evolução", "Configurações"
     ])
 
-# Integração automática: Relatar dor na barra lateral atualiza diretamente as restrições
-safety_input = st.sidebar.text_input("Relatar dor ou condição física:", placeholder="Ex: Dor no joelho...")
-if safety_input and profile:
-    is_unsafe, warning_msg = check_safety_guidelines(safety_input)
-    if is_unsafe:
-        st.sidebar.error(warning_msg)
+# Barra Lateral: Relatar dor com botão próprio de envio para as restrições
+st.sidebar.divider()
+st.sidebar.subheader("🚨 Alerta de Dor / Condição")
+with st.sidebar.form("safety_form"):
+    safety_input = st.text_input("Relatar dor ou condição física:", placeholder="Ex: Dor no joelho...")
+    enviar_dor = st.form_submit_button("Enviar para Restrições")
     
-    current_restrictions = profile.get("restrictions", "") or ""
-    if safety_input not in current_restrictions:
-        new_restriction = f"{current_restrictions} | Relato lateral: {safety_input}" if current_restrictions else f"Relato lateral: {safety_input}"
+    if enviar_dor and safety_input and profile:
+        is_unsafe, warning_msg = check_safety_guidelines(safety_input)
+        if is_unsafe:
+            st.sidebar.error(warning_msg)
+        
+        current_restrictions = profile.get("restrictions", "") or ""
+        new_restriction = f"{current_restrictions} | Relato: {safety_input}" if current_restrictions else f"Relato: {safety_input}"
+        
         conn = get_connection()
         cursor = conn.cursor()
         cursor.execute("UPDATE users SET restrictions = ? WHERE id = 1", (new_restriction,))
         conn.commit()
         conn.close()
+        st.sidebar.success("Dor enviada e adicionada às restrições!")
+        st.rerun()
 
 # ---------------------------------------------------------
-# 1. DASHBOARD
+# 1. DASHBOARD (Exibe todas as informações e métricas conversadas)
 # ---------------------------------------------------------
 if menu == "Dashboard":
     st.title("📊 Painel de Controle Principal")
-    if profile:
+    
+    if not profile:
+        st.warning("⚠️ Nenhum perfil cadastrado. Vá até a aba **Meu Perfil**.")
+    else:
         summary = get_analytics_summary(1)
-        c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Treinos Realizados", summary["total_workouts"])
-        c2.metric("Volume Total (kg)", f"{summary['total_volume']:,.1f}")
-        c3.metric("Peso Atual", f"{profile.get('weight', 0)} kg")
-        c4.metric("Objetivo", profile.get("goal", "Hipertrofia"))
+        
+        # Métricas Principais
+        col1, col2, col3, col4 = st.columns(4)
+        col1.metric("Treinos Realizados", summary["total_workouts"])
+        col2.metric("Volume Total (kg)", f"{summary['total_volume']:,.1f}")
+        col3.metric("Peso Atual", f"{profile.get('weight', 0)} kg")
+        col4.metric("Objetivo", profile.get("goal", "Hipertrofia"))
         
         st.divider()
-        st.subheader("📋 Resumo do Perfil e Anamnese")
-        st.write(f"**Nome:** {profile.get('name')} | **Experiência:** {profile.get('experience')} | **Frequência:** {profile.get('frequency')}x/sem")
+        st.subheader("📋 Resumo Completo do Aluno & Anamnese")
+        
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            st.markdown(f"**Nome:** {profile.get('name')}")
+            st.markdown(f"**Idade:** {profile.get('age')} anos")
+            st.markdown(f"**Sexo:** {profile.get('sex')}")
+            st.markdown(f"**Altura:** {profile.get('height')} m")
+        with c2:
+            st.markdown(f"**Experiência:** {profile.get('experience')}")
+            st.markdown(f"**Frequência:** {profile.get('frequency')}x por semana")
+            st.markdown(f"**Tempo por Sessão:** {profile.get('duration')} min")
+            st.markdown(f"**Equipamentos:** {profile.get('equipment')}")
+        with c3:
+            st.markdown(f"**Sono:** {profile.get('sleep_quality')}")
+            st.markdown(f"**Disposição:** {profile.get('disposition')}")
+            st.markdown(f"**Recuperação:** {profile.get('recovery_quality')}")
+            
         if profile.get('restrictions'):
-            st.warning(f"⚠️ **Restrições / Lesões / Dores:** {profile.get('restrictions')}")
+            st.error(f"⚠️ **Restrições, Lesões e Dores Registradas:** {profile.get('restrictions')}")
+        else:
+            st.success("✅ Nenhuma restrição ou dor relatada no momento.")
 
 # ---------------------------------------------------------
 # 2. MEU PERFIL
@@ -108,7 +137,7 @@ elif menu == "Meu Perfil":
         with c10:
             recovery = st.selectbox("Recuperação *", ["Rápida", "Normal", "Lenta"])
             
-        restrictions = st.text_area("Restrições ou lesões (Atualiza automaticamente com relatos de dor)", value=curr.get("restrictions", ""))
+        restrictions = st.text_area("Restrições ou lesões", value=curr.get("restrictions", ""))
         
         st.divider()
         terms_accepted = st.checkbox("Li e aceito os termos de responsabilidade e uso do sistema. *", value=bool(curr.get("terms_accepted", 0)))
@@ -231,4 +260,4 @@ elif menu == "Evolução":
 # ---------------------------------------------------------
 elif menu == "Configurações":
     st.title("⚙️ Configurações")
-    st.write("AI FIT ELITE operando perfeitamente.")
+    st.write("AI FIT ELITE operando com motor determinístico.")
