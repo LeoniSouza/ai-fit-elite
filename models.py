@@ -5,40 +5,27 @@ def save_user_profile(data):
     conn = get_connection()
     cursor = conn.cursor()
     
-    cursor.execute("SELECT id FROM users LIMIT 1")
-    user = cursor.fetchone()
+    # Força o salvamento garantindo o ID 1 para manter um único perfil consistente
+    cursor.execute("""
+        INSERT OR REPLACE INTO users (
+            id, name, age, sex, weight, height, goal, experience, 
+            frequency, duration, equipment, sleep_quality, 
+            disposition, recovery_quality, restrictions, terms_accepted
+        ) VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        data["name"], data["age"], data["sex"], data["weight"], data["height"],
+        data["goal"], data["experience"], data["frequency"], data["duration"], data["equipment"],
+        data["sleep_quality"], data["disposition"], data["recovery_quality"], data["restrictions"], 
+        data["terms_accepted"]
+    ))
     
-    if user:
-        cursor.execute("""
-            UPDATE users SET 
-                name = ?, age = ?, sex = ?, weight = ?, height = ?, 
-                goal = ?, experience = ?, frequency = ?, duration = ?, 
-                equipment = ?, sleep_quality = ?, disposition = ?, 
-                recovery_quality = ?, restrictions = ?, terms_accepted = ?
-            WHERE id = ?
-        """, (
-            data["name"], data["age"], data["sex"], data["weight"], data["height"],
-            data["goal"], data["experience"], data["frequency"], data["duration"], data["equipment"],
-            data["sleep_quality"], data["disposition"], data["recovery_quality"], data["restrictions"], 
-            data["terms_accepted"], user["id"]
-        ))
-    else:
-        cursor.execute("""
-            INSERT INTO users (name, age, sex, weight, height, goal, experience, frequency, duration, equipment, sleep_quality, disposition, recovery_quality, restrictions, terms_accepted)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            data["name"], data["age"], data["sex"], data["weight"], data["height"],
-            data["goal"], data["experience"], data["frequency"], data["duration"], data["equipment"],
-            data["sleep_quality"], data["disposition"], data["recovery_quality"], data["restrictions"], data["terms_accepted"]
-        ))
-        
     conn.commit()
     conn.close()
 
 def get_user_profile():
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM users ORDER BY id DESC LIMIT 1")
+    cursor.execute("SELECT * FROM users WHERE id = 1")
     row = cursor.fetchone()
     conn.close()
     return dict(row) if row else None
