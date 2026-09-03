@@ -138,9 +138,8 @@ elif menu == "Meu Perfil":
                     "disposition": disposition, "recovery_quality": recovery, "restrictions": restrictions,
                     "terms_accepted": 1
                 })
-                # Altera o estado na sessão e força o redirecionamento automático para o Dashboard
                 st.session_state.sistema_liberado = True
-                st.success("Salvo com sucesso! Liberando o sistema...")
+                st.success("Salvo com sucesso! Redirecionando para o Dashboard...")
                 st.rerun()
 
 elif menu == "Treino de Hoje":
