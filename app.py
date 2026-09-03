@@ -1,6 +1,7 @@
 st.sidebar.divider()
 st.sidebar.subheader("🚨 Relatar Dor")
 dor_input = st.sidebar.text_input("Condição física ou dor:", placeholder="Ex: Dor no joelho...", key="input_dor_lateral")
+
 if st.sidebar.button("Enviar para Restrições"):
     if dor_input:
         conn = get_connection()
