@@ -1,11 +1,8 @@
-# Formulário lateral para relatar dor e enviar direto para restrições
 st.sidebar.divider()
 st.sidebar.subheader("🚨 Relatar Dor")
-with st.sidebar.form("dor_form", clear_on_submit=True):
-    dor_input = st.text_input("Condição física ou dor:", placeholder="Ex: Dor no joelho...")
-    enviar_dor = st.form_submit_button("Enviar para Restrições")
-    
-    if enviar_dor and dor_input:
+dor_input = st.sidebar.text_input("Condição física ou dor:", placeholder="Ex: Dor no joelho...", key="input_dor_lateral")
+if st.sidebar.button("Enviar para Restrições"):
+    if dor_input:
         conn = get_connection()
         cursor = conn.cursor()
         cursor.execute("SELECT restrictions FROM users WHERE id = 1")
@@ -19,3 +16,5 @@ with st.sidebar.form("dor_form", clear_on_submit=True):
         conn.close()
         st.sidebar.success("Adicionado às restrições com sucesso!")
         st.rerun()
+    else:
+        st.sidebar.warning("Digite algo no campo de dor antes de enviar.")
