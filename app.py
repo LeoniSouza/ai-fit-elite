@@ -1,21 +1,17 @@
-st.sidebar.divider()
-st.sidebar.subheader("🚨 Relatar Dor")
-dor_input = st.sidebar.text_input("Condição física ou dor:", placeholder="Ex: Dor no joelho...", key="input_dor_lateral")
+import streamlit as st
+import datetime
+from database import init_db, get_connection, get_analytics_summary
+from models import save_user_profile, get_user_profile, add_body_metric, get_body_metrics
+from training_engine import generate_workout, save_generated_workout
+from safety import check_safety_guidelines
 
-if st.sidebar.button("Enviar para Restrições"):
-    if dor_input:
-        conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute("SELECT restrictions FROM users WHERE id = 1")
-        res_atual = cursor.fetchone()
-        
-        atual_rest = res_atual["restrictions"] if res_atual and res_atual["restrictions"] else ""
-        nova_rest = f"{atual_rest} | Relato: {dor_input}" if atual_rest else f"Relato: {dor_input}"
-        
-        cursor.execute("UPDATE users SET restrictions = ? WHERE id = 1", (nova_rest,))
-        conn.commit()
-        conn.close()
-        st.sidebar.success("Adicionado às restrições com sucesso!")
-        st.rerun()
-    else:
-        st.sidebar.warning("Digite algo no campo de dor antes de enviar.")
+# 1. A configuração da página DEVE ser a primeira instrução do Streamlit
+st.set_page_config(page_title="AI FIT ELITE", page_icon="⚡", layout="wide")
+
+# 2. Inicialização do banco
+init_db()
+
+# 3. Carregamento de dados e elementos da barra lateral
+profile = get_user_profile()
+
+st.sidebar.title("⚡ AI FIT ELITE")
