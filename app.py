@@ -13,9 +13,9 @@ profile = get_user_profile()
 
 st.sidebar.title("⚡ AI FIT ELITE")
 
-# Validação estrita: Se o perfil não existe ou os termos não foram aceitos, bloqueia o menu e obriga o preenchimento
+# Validação estrita: Se o perfil não existe ou os termos não foram aceitos, bloqueia o menu
 if not profile or not profile.get("terms_accepted"):
-    st.sidebar.warning("⚠️ Preenchimento obrigatório do Perfil e Anamnese para liberar o sistema.")
+    st.sidebar.warning("⚠️ Preenchimento obrigatório do Perfil e Anamnese.")
     menu = "Meu Perfil"
 else:
     menu = st.sidebar.radio("Navegação", [
@@ -29,7 +29,7 @@ if safety_input:
         st.sidebar.error(warning_msg)
 
 # ---------------------------------------------------------
-# DASHBOARD (Mostra todas as informações e métricas)
+# DASHBOARD
 # ---------------------------------------------------------
 if menu == "Dashboard":
     st.title("📊 Painel de Controle Principal")
@@ -61,31 +61,31 @@ if menu == "Dashboard":
         st.warning(f"⚠️ **Restrições / Limitações Informadas:** {profile.get('restrictions')}")
 
 # ---------------------------------------------------------
-# MEU PERFIL (Obrigatório e com Anamnese e Termos)
+# MEU PERFIL (Com indicação exata do que falta)
 # ---------------------------------------------------------
 elif menu == "Meu Perfil":
     st.title("👤 Avaliação Inicial, Anamnese e Termos")
     
     if not profile or not profile.get("terms_accepted"):
-        st.error("🚨 **Atenção:** Você deve preencher todos os dados e aceitar os termos de responsabilidade para acessar o sistema.")
+        st.error("🚨 **Atenção:** Preencha todos os campos obrigatórios abaixo e aceite os termos para liberar o sistema.")
     
     curr = profile or {}
     
     with st.form("profile_form"):
-        name = st.text_input("Nome Completo", value=curr.get("name", ""))
+        name = st.text_input("Nome Completo *", value=curr.get("name", ""))
         c1, c2, c3 = st.columns(3)
         with c1:
-            age = st.number_input("Idade", value=curr.get("age", 25))
+            age = st.number_input("Idade *", value=curr.get("age", 25))
         with c2:
-            sex = st.selectbox("Sexo", ["Masculino", "Feminino", "Outro"], index=0)
+            sex = st.selectbox("Sexo *", ["Masculino", "Feminino", "Outro"], index=0)
         with c3:
-            weight = st.number_input("Peso (kg)", value=curr.get("weight", 70.0))
+            weight = st.number_input("Peso (kg) *", value=curr.get("weight", 70.0))
             
         c4, c5 = st.columns(2)
         with c4:
-            height = st.number_input("Altura (m)", value=curr.get("height", 1.75))
+            height = st.number_input("Altura (m) *", value=curr.get("height", 1.75))
         with c5:
-            goal = st.selectbox("Objetivo Principal", [
+            goal = st.selectbox("Objetivo Principal *", [
                 "Hipertrofia", 
                 "Emagrecimento e definição", 
                 "Condicionamento físico",
@@ -93,25 +93,25 @@ elif menu == "Meu Perfil":
                 "Desenvolvimento físico geral"
             ])
             
-        experience = st.selectbox("Nível de Experiência com Musculação", ["Iniciante", "Intermediário", "Avançado"])
+        experience = st.selectbox("Nível de Experiência com Musculação *", ["Iniciante", "Intermediário", "Avançado"])
         
         c6, c7 = st.columns(2)
         with c6:
-            frequency = st.slider("Dias disponíveis por semana", 1, 7, value=curr.get("frequency", 4))
+            frequency = st.slider("Dias disponíveis por semana *", 1, 7, value=curr.get("frequency", 4))
         with c7:
-            duration = st.slider("Tempo disponível por sessão (min)", 30, 120, value=curr.get("duration", 60))
+            duration = st.slider("Tempo disponível por sessão (min) *", 30, 120, value=curr.get("duration", 60))
             
-        equipment = st.selectbox("Equipamentos / Local de Treinamento", ["Academia completa", "Home Gym", "Peso Corporal"])
+        equipment = st.selectbox("Equipamentos / Local de Treinamento *", ["Academia completa", "Home Gym", "Peso Corporal"])
         
         st.divider()
         st.subheader("🛌 Anamnese de Recuperação e Estilo de Vida")
         c8, c9, c10 = st.columns(3)
         with c8:
-            sleep = st.selectbox("Qualidade percebida do sono", ["Excelente", "Boa", "Regular", "Ruim"])
+            sleep = st.selectbox("Qualidade percebida do sono *", ["Excelente", "Boa", "Regular", "Ruim"])
         with c9:
-            disposition = st.selectbox("Nível habitual de disposição", ["Alto", "Moderado", "Baixo"])
+            disposition = st.selectbox("Nível habitual de disposição *", ["Alto", "Moderado", "Baixo"])
         with c10:
-            recovery = st.selectbox("Qualidade percebida da recuperação", ["Rápida", "Normal", "Lenta"])
+            recovery = st.selectbox("Qualidade percebida da recuperação *", ["Rápida", "Normal", "Lenta"])
             
         restrictions = st.text_area("Restrições, lesões ou limitações informadas", value=curr.get("restrictions", ""))
         
@@ -121,14 +121,20 @@ elif menu == "Meu Perfil":
         Declaro que estou apto fisicamente para a prática de exercícios físicos e que as informações prestadas são verdadeiras. 
         O **AI FIT ELITE** é um sistema de suporte tecnológico e não substitui a avaliação ou acompanhamento médico e de profissionais de educação física habilitados.
         """)
-        terms_accepted = st.checkbox("Li e aceito os termos de responsabilidade e uso do sistema.", value=bool(curr.get("terms_accepted", 0)))
+        terms_accepted = st.checkbox("Li e aceito os termos de responsabilidade e uso do sistema. *", value=bool(curr.get("terms_accepted", 0)))
         
         submitted = st.form_submit_button("Salvar Perfil e Liberar Sistema")
+        
         if submitted:
+            # Lista de validação detalhada do que falta preencher
+            erros = []
             if not name.strip():
-                st.error("Por favor, preencha o seu nome.")
-            elif not terms_accepted:
-                st.error("Você deve aceitar os termos de responsabilidade para continuar.")
+                erros.append("• O campo **Nome Completo** está vazio.")
+            if not terms_accepted:
+                erros.append("• Você precisa marcar a caixinha aceitando os **Termos de Responsabilidade**.")
+                
+            if erros:
+                st.error("❌ **Falta preencher os seguintes campos obrigatórios:**\n\n" + "\n".join(erros))
             else:
                 save_user_profile({
                     "name": name, "age": age, "sex": sex, "weight": weight, "height": height,
@@ -190,7 +196,7 @@ elif menu == "Treino de Hoje":
     conn.close()
 
 # ---------------------------------------------------------
-# FICHA DE TREINO ATUAL (Substituiu a Biblioteca)
+# FICHA DE TREINO ATUAL
 # ---------------------------------------------------------
 elif menu == "Ficha de Treino Atual":
     st.title("📋 Ficha de Treino Ativa do Aluno")
