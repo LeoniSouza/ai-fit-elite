@@ -13,61 +13,43 @@ profile = get_user_profile()
 
 st.sidebar.title("⚡ AI FIT ELITE")
 
-# Validação estrita: Se o perfil não existe ou os termos não foram aceitos, bloqueia o menu
+# Controle de navegação estrito e limpo
 if not profile or not profile.get("terms_accepted"):
-    st.sidebar.warning("⚠️ Preenchimento obrigatório do Perfil e Anamnese.")
+    st.sidebar.warning("⚠️ Conclua o Perfil e Anamnese.")
     menu = "Meu Perfil"
 else:
     menu = st.sidebar.radio("Navegação", [
         "Dashboard", "Meu Perfil", "Treino de Hoje", "Ficha de Treino Atual", "Histórico", "Evolução", "Configurações"
     ])
 
-safety_input = st.sidebar.text_input("Relatar dor ou condição física:", placeholder="Ex: Senti dor no joelho...")
+safety_input = st.sidebar.text_input("Relatar dor ou condição física:", placeholder="Ex: Dor no joelho...")
 if safety_input:
     is_unsafe, warning_msg = check_safety_guidelines(safety_input)
     if is_unsafe:
         st.sidebar.error(warning_msg)
 
 # ---------------------------------------------------------
-# DASHBOARD
+# 1. DASHBOARD
 # ---------------------------------------------------------
 if menu == "Dashboard":
     st.title("📊 Painel de Controle Principal")
-    
-    summary = get_analytics_summary(1)
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Treinos Realizados", summary["total_workouts"])
-    col2.metric("Volume Total (kg)", f"{summary['total_volume']:,.1f}")
-    col3.metric("Peso Atual", f"{profile.get('weight', 0)} kg")
-    col4.metric("Objetivo", profile.get("goal", "Hipertrofia"))
-    
-    st.divider()
-    st.subheader("📋 Resumo do Perfil e Anamnese Cadastrada")
-    
-    c1, c2, c3 = st.columns(3)
-    c1.markdown(f"**Nome:** {profile.get('name')}")
-    c1.markdown(f"**Idade:** {profile.get('age')} anos")
-    c1.markdown(f"**Sexo:** {profile.get('sex')}")
-    
-    c2.markdown(f"**Altura:** {profile.get('height')} m")
-    c2.markdown(f"**Experiência:** {profile.get('experience')}")
-    c2.markdown(f"**Frequência:** {profile.get('frequency')}x por semana")
-    
-    c3.markdown(f"**Sono:** {profile.get('sleep_quality')}")
-    c3.markdown(f"**Disposição:** {profile.get('disposition')}")
-    c3.markdown(f"**Recuperação:** {profile.get('recovery_quality')}")
-    
-    if profile.get('restrictions'):
-        st.warning(f"⚠️ **Restrições / Limitações Informadas:** {profile.get('restrictions')}")
+    if profile:
+        summary = get_analytics_summary(1)
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Treinos Realizados", summary["total_workouts"])
+        c2.metric("Volume Total (kg)", f"{summary['total_volume']:,.1f}")
+        c3.metric("Peso Atual", f"{profile.get('weight', 0)} kg")
+        c4.metric("Objetivo", profile.get("goal", "Hipertrofia"))
+        
+        st.divider()
+        st.subheader("📋 Resumo do Perfil e Anamnese")
+        st.write(f"**Nome:** {profile.get('name')} | **Experiência:** {profile.get('experience')} | **Frequência:** {profile.get('frequency')}x/sem")
 
 # ---------------------------------------------------------
-# MEU PERFIL (Com marcadores * e depuração)
+# 2. MEU PERFIL
 # ---------------------------------------------------------
 elif menu == "Meu Perfil":
     st.title("👤 Avaliação Inicial, Anamnese e Termos")
-    
-    if not profile or not profile.get("terms_accepted"):
-        st.error("🚨 **Atenção:** Preencha todos os campos obrigatórios marcados com **(*)** e aceite os termos para liberar o sistema.")
     
     curr = profile or {}
     
@@ -86,71 +68,54 @@ elif menu == "Meu Perfil":
             height = st.number_input("Altura (m) *", value=float(curr.get("height", 1.75)))
         with c5:
             goal = st.selectbox("Objetivo Principal *", [
-                "Hipertrofia", 
-                "Emagrecimento e definição", 
-                "Condicionamento físico",
-                "Treinamento de força",
-                "Desenvolvimento físico geral"
+                "Hipertrofia", "Emagrecimento e definição", "Condicionamento físico", "Treinamento de força", "Desenvolvimento físico geral"
             ])
             
-        experience = st.selectbox("Nível de Experiência com Musculação *", ["Iniciante", "Intermediário", "Avançado"])
+        experience = st.selectbox("Nível de Experiência *", ["Iniciante", "Intermediário", "Avançado"])
         
         c6, c7 = st.columns(2)
         with c6:
-            frequency = st.slider("Dias disponíveis por semana *", 1, 7, value=int(curr.get("frequency", 4)))
+            frequency = st.slider("Dias por semana *", 1, 7, value=int(curr.get("frequency", 4)))
         with c7:
-            duration = st.slider("Tempo disponível por sessão (min) *", 30, 120, value=int(curr.get("duration", 60)))
+            duration = st.slider("Minutos por sessão *", 30, 120, value=int(curr.get("duration", 60)))
             
-        equipment = st.selectbox("Equipamentos / Local de Treinamento *", ["Academia completa", "Home Gym", "Peso Corporal"])
+        equipment = st.selectbox("Equipamentos *", ["Academia completa", "Home Gym", "Peso Corporal"])
         
         st.divider()
-        st.subheader("🛌 Anamnese de Recuperação e Estilo de Vida")
+        st.subheader("🛌 Anamnese")
         c8, c9, c10 = st.columns(3)
         with c8:
-            sleep = st.selectbox("Qualidade percebida do sono *", ["Excelente", "Boa", "Regular", "Ruim"])
+            sleep = st.selectbox("Sono *", ["Excelente", "Boa", "Regular", "Ruim"])
         with c9:
-            disposition = st.selectbox("Nível habitual de disposição *", ["Alto", "Moderado", "Baixo"])
+            disposition = st.selectbox("Disposição *", ["Alto", "Moderado", "Baixo"])
         with c10:
-            recovery = st.selectbox("Qualidade percebida da recuperação *", ["Rápida", "Normal", "Lenta"])
+            recovery = st.selectbox("Recuperação *", ["Rápida", "Normal", "Lenta"])
             
-        restrictions = st.text_area("Restrições, lesões ou limitações informadas", value=curr.get("restrictions", ""))
+        restrictions = st.text_area("Restrições ou lesões", value=curr.get("restrictions", ""))
         
         st.divider()
-        st.subheader("⚖️ Termos de Responsabilidade")
-        st.markdown("""
-        Declaro que estou apto fisicamente para a prática de exercícios físicos e que as informações prestadas são verdadeiras. 
-        O **AI FIT ELITE** é um sistema de suporte tecnológico e não substitui a avaliação ou acompanhamento médico e de profissionais de educação física habilitados.
-        """)
-        
-        # Define o valor inicial do checkbox com base no banco
-        ja_aceito = bool(curr.get("terms_accepted", 0))
-        terms_accepted = st.checkbox("Li e aceito os termos de responsabilidade e uso do sistema. *", value=ja_aceito)
+        terms_accepted = st.checkbox("Li e aceito os termos de responsabilidade e uso do sistema. *", value=bool(curr.get("terms_accepted", 0)))
         
         submitted = st.form_submit_button("Salvar Perfil e Liberar Sistema")
         
         if submitted:
-            # Validação detalhada mostrando o status exato de cada regra
-            erros = []
-            if not name or not name.strip():
-                erros.append("• O campo **Nome Completo** está vazio (*).")
-            if not terms_accepted:
-                erros.append("• Você precisa marcar a caixinha aceitando os **Termos de Responsabilidade** (*).")
-                
-            if erros:
-                st.error("❌ **Não foi possível avançar por falta de preenchimento:**\n\n" + "\n".join(erros))
+            if not name.strip():
+                st.error("Preencha o seu Nome Completo.")
+            elif not terms_accepted:
+                st.error("Você deve aceitar os Termos de Responsabilidade.")
             else:
                 save_user_profile({
                     "name": name, "age": age, "sex": sex, "weight": weight, "height": height,
                     "goal": goal, "experience": experience, "frequency": frequency,
                     "duration": duration, "equipment": equipment, "sleep_quality": sleep,
                     "disposition": disposition, "recovery_quality": recovery, "restrictions": restrictions,
-                    "terms_accepted": 1 if terms_accepted else 0
+                    "terms_accepted": 1
                 })
-                st.success("Perfil salvo e validado com sucesso! Sistema liberado.")
+                st.success("Perfil salvo! Sistema liberado.")
                 st.rerun()
 
 # ---------------------------------------------------------
-# TREINO DE HOJE
+# 3. TREINO DE HOJE
 # ---------------------------------------------------------
 elif menu == "Treino de Hoje":
     st.title("🏋️ Execução do Treino Adaptativo")
@@ -161,15 +126,14 @@ elif menu == "Treino de Hoje":
     workout_row = cursor.fetchone()
     
     if not workout_row:
-        st.info("Nenhum treino ativo no momento. Gere sua próxima sessão com base no seu objetivo.")
+        st.info("Nenhum treino ativo no momento.")
         if st.button("Gerar Próximo Treino do Ciclo"):
             plan = generate_workout(profile)
             save_generated_workout(1, plan)
-            st.success("Novo treino gerado e alinhado na sequência semanal!")
+            st.success("Novo treino gerado!")
             st.rerun()
     else:
-        st.subheader(f"Sessão: {workout_row['workout_name']} | Data: {workout_row['date']}")
-        
+        st.subheader(f"Sessão: {workout_row['workout_name']}")
         cursor.execute("""
             SELECT we.id as we_id, e.name, we.target_sets, we.target_reps, we.rest_time 
             FROM workout_exercises we JOIN exercises e ON we.exercise_id = e.id
@@ -178,13 +142,13 @@ elif menu == "Treino de Hoje":
         exercises = cursor.fetchall()
         
         for ex in exercises:
-            with st.expander(f"🔹 {ex['name']} | Séries: {ex['target_sets']} | Reps: {ex['target_reps']} | Descanso: {ex['rest_time']}"):
+            with st.expander(f"🔹 {ex['name']} | Séries: {ex['target_sets']} | Reps: {ex['target_reps']}"):
                 for s in range(1, ex["target_sets"] + 1):
                     c1, c2, c3, c4 = st.columns(4)
-                    w = c1.number_input(f"Carga (kg) S{s}", value=0.0, key=f"w_{ex['we_id']}_{s}")
+                    w = c1.number_input(f"Carga S{s}", value=0.0, key=f"w_{ex['we_id']}_{s}")
                     r = c2.number_input(f"Reps S{s}", value=10, key=f"r_{ex['we_id']}_{s}")
                     rir = c3.number_input(f"RIR S{s}", value=2.0, key=f"rir_{ex['we_id']}_{s}")
-                    done = c4.checkbox(f"Concluir S{s}", key=f"chk_{ex['we_id']}_{s}")
+                    done = c4.checkbox(f"OK S{s}", key=f"chk_{ex['we_id']}_{s}")
                     if done:
                         cursor.execute("INSERT OR REPLACE INTO sets_log (workout_exercise_id, set_number, weight, reps, rir, rpe) VALUES (?, ?, ?, ?, ?, ?)", (ex["we_id"], s, w, r, rir, 10 - rir))
                         conn.commit()
@@ -193,63 +157,60 @@ elif menu == "Treino de Hoje":
         if st.button("Finalizar Treino e Avançar Ciclo"):
             cursor.execute("UPDATE workouts SET completed = 1 WHERE id = ?", (workout_row["id"],))
             conn.commit()
-            st.success("Treino finalizado com sucesso! O ciclo avançou para a próxima seção.")
-            st.balloons()
+            st.success("Treino finalizado!")
             st.rerun()
     conn.close()
 
 # ---------------------------------------------------------
-# FICHA DE TREINO ATUAL
+# 4. FICHA DE TREINO ATUAL
 # ---------------------------------------------------------
 elif menu == "Ficha de Treino Atual":
-    st.title("📋 Ficha de Treino Ativa do Aluno")
+    st.title("📋 Ficha de Treino Ativa")
     conn = get_connection()
     cursor = conn.cursor()
-    
     cursor.execute("SELECT * FROM workouts WHERE user_id = 1 AND completed = 0 ORDER BY id DESC LIMIT 1")
     active_workout = cursor.fetchone()
     
     if not active_workout:
-        st.info("Nenhum treino ativo gerado no momento. Vá em **Treino de Hoje** para gerar sua ficha.")
+        st.info("Nenhum treino ativo. Vá em **Treino de Hoje** para gerar.")
     else:
-        st.subheader(f"Sessão Vigente: {active_workout['workout_name']}")
         cursor.execute("""
-            SELECT e.name, e.muscle_group, e.equipment, we.target_sets, we.target_reps, we.rest_time, e.instructions
-            FROM workout_exercises we 
-            JOIN exercises e ON we.exercise_id = e.id
+            SELECT e.name, e.muscle_group, we.target_sets, we.target_reps, we.rest_time, e.instructions
+            FROM workout_exercises we JOIN exercises e ON we.exercise_id = e.id
             WHERE we.workout_id = ?
         """, (active_workout["id"],))
-        ficha_exercises = cursor.fetchall()
-        
-        for idx, ex in enumerate(ficha_exercises, 1):
-            with st.expander(f"{idx}. {ex['name']} ({ex['muscle_group']})"):
-                st.markdown(f"**Equipamento:** {ex['equipment']}")
-                st.markdown(f"**Prescrição:** {ex['target_sets']} séries de {ex['target_reps']} repetições")
-                st.markdown(f"**Descanso:** {ex['rest_time']}")
-                st.markdown(f"**Instrução de Execução:** {ex['instructions']}")
+        for idx, ex in enumerate(cursor.fetchall(), 1):
+            st.markdown(f"**{idx}. {ex['name']}** ({ex['muscle_group']}) — {ex['target_sets']}x{ex['target_reps']} (Descanso: {ex['rest_time']})")
     conn.close()
 
+# ---------------------------------------------------------
+# 5. HISTÓRICO
+# ---------------------------------------------------------
 elif menu == "Histórico":
-    st.title("📜 Histórico de Sessões")
+    st.title("📜 Histórico")
     conn = get_connection()
     df = pd.read_sql_query("SELECT id, date, workout_name, completed FROM workouts WHERE user_id = 1 ORDER BY date DESC", conn)
     conn.close()
     st.dataframe(df, use_container_width=True)
 
+# ---------------------------------------------------------
+# 6. EVOLUÇÃO
+# ---------------------------------------------------------
 elif menu == "Evolução":
-    st.title("📈 Acompanhamento de Peso Corporal")
+    st.title("📈 Evolução de Peso")
     with st.form("met_form"):
         nw = st.number_input("Novo Peso (kg)", value=float(profile.get("weight", 70.0)))
-        if st.form_submit_button("Salvar Medição"):
+        if st.form_submit_button("Salvar Peso"):
             add_body_metric(1, datetime.date.today().isoformat(), nw)
-            st.success("Salvo com sucesso!")
+            st.success("Salvo!")
             st.rerun()
     df_m = get_body_metrics(1)
     if not df_m.empty:
         st.line_chart(df_m, x="date", y="weight")
-    else:
-        st.info("Nenhuma medição registrada.")
 
+# ---------------------------------------------------------
+# 7. CONFIGURAÇÕES
+# ---------------------------------------------------------
 elif menu == "Configurações":
-    st.title("⚙️ Configurações do Sistema")
-    st.write("Sistema rodando com motor determinístico adaptativo e anamnese obrigatória.")
+    st.title("⚙️ Configurações")
+    st.write("AI FIT ELITE operando de forma limpa e otimizada.")
