@@ -38,7 +38,7 @@ def save_user_profile(data):
 def get_user_profile():
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM users LIMIT 1")
+    cursor.execute("SELECT * FROM users ORDER BY id DESC LIMIT 1")
     row = cursor.fetchone()
     conn.close()
     return dict(row) if row else None
