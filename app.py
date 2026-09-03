@@ -10,7 +10,6 @@ st.set_page_config(page_title="AI FIT ELITE", page_icon="⚡", layout="wide")
 
 init_db()
 
-# Garante que o perfil seja lido e o estado seja forçado corretamente
 profile = get_user_profile()
 
 if "sistema_liberado" not in st.session_state:
@@ -24,9 +23,12 @@ if not st.session_state.sistema_liberado:
     st.sidebar.warning("⚠️ Conclua o Perfil e Anamnese para liberar o sistema.")
     menu = "Meu Perfil"
 else:
-    menu = st.sidebar.radio("Navegação", [
-        "Dashboard", "Meu Perfil", "Treino de Hoje", "Ficha de Treino Atual", "Histórico", "Evolução", "Configurações"
-    ])
+    # Garante que, se o usuário acabou de liberar, a aba padrão ativa seja o Dashboard
+    options = ["Dashboard", "Meu Perfil", "Treino de Hoje", "Ficha de Treino Atual", "Histórico", "Evolução", "Configurações"]
+    default_idx = 0 if "just_saved" in st.session_state else 0
+    menu = st.sidebar.radio("Navegação", options, index=default_idx)
+    if "just_saved" in st.session_state:
+        del st.session_state.just_saved
 
 st.sidebar.divider()
 st.sidebar.subheader("🚨 Relatar Dor")
@@ -139,7 +141,8 @@ elif menu == "Meu Perfil":
                     "terms_accepted": 1
                 })
                 st.session_state.sistema_liberado = True
-                st.success("Salvo com sucesso! Redirecionando para o Dashboard...")
+                st.session_state.just_saved = True
+                st.success("Salvo com sucesso! Indo para o Dashboard...")
                 st.rerun()
 
 elif menu == "Treino de Hoje":
