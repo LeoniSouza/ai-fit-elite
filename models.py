@@ -6,11 +6,12 @@ def save_user_profile(data):
     cursor = conn.cursor()
     cursor.execute("DELETE FROM users")
     cursor.execute("""
-        INSERT INTO users (name, age, sex, weight, height, goal, experience, frequency, duration, equipment)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO users (name, age, sex, weight, height, goal, experience, frequency, duration, equipment, sleep_quality, disposition, recovery_quality, restrictions, terms_accepted)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         data["name"], data["age"], data["sex"], data["weight"], data["height"],
-        data["goal"], data["experience"], data["frequency"], data["duration"], data["equipment"]
+        data["goal"], data["experience"], data["frequency"], data["duration"], data["equipment"],
+        data["sleep_quality"], data["disposition"], data["recovery_quality"], data["restrictions"], data["terms_accepted"]
     ))
     conn.commit()
     conn.close()
