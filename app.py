@@ -9,13 +9,10 @@ st.set_page_config(page_title="AI FIT ELITE", page_icon="⚡", layout="wide")
 
 init_db()
 
+# Local de alteração 1: Gerenciamento de Estado para liberação imediata
 if "sistema_liberado" not in st.session_state:
     perfil_salvo = get_user_profile()
     st.session_state.sistema_liberado = bool(perfil_salvo and perfil_salvo.get("terms_accepted"))
-
-profile = get_user_profile()
-
-st.sidebar.title("⚡ AI FIT ELITE")
 
 if not st.session_state.sistema_liberado:
     st.sidebar.warning("⚠️ Conclua o Perfil e Anamnese para liberar o sistema.")
