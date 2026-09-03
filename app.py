@@ -3,7 +3,7 @@ import datetime
 from database import init_db, get_connection
 from models import save_user_profile, get_user_profile, add_body_metric, get_body_metrics
 from training_engine import generate_workout, save_generated_workout
-from analytics import get_analytics_summary
+from database import get_analytics_summary
 from safety import check_safety_guidelines
 
 st.set_page_config(page_title="AI FIT ELITE", page_icon="⚡", layout="wide")
