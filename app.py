@@ -107,47 +107,64 @@ elif menu == "Meu Perfil":
         restrictions = st.text_area("Restrições ou lesões", value=curr.get("restrictions", ""))
         
         st.divider()
-        terms_accepted = st.checkbox("Li e aceito os termos de responsabilidade e uso do sistema. *", value=bool(curr.get("terms_accepted", 0)))
-        
-        submitted = st.form_submit_button("Salvar Perfil e Liberar Sistema")
-        
-        if submitted:
-            if not name.strip():
-                st.error("Preencha o nome.")
-            elif not terms_accepted:
-                st.error("Aceite os termos de responsabilidade.")
-            else:
-                save_user_profile({
-                    "name": name, "age": age, "sex": sex, "weight": weight, "height": height,
-                    "goal": goal, "experience": experience, "frequency": frequency,
-                    "duration": duration, "equipment": equipment, "sleep_quality": sleep,
-                    "disposition": disposition, "recovery_quality": recovery, "restrictions": restrictions,
-                    "terms_accepted": 1
-                })
-                st.session_state.sistema_liberado = True
-                st.success("Salvo com sucesso!")
-                st.rerun()
+       import pandas as pd
+from database import get_connection
 
-elif menu == "Treino de Hoje":
-    st.title("🏋️ Execução do Treino Adaptativo")
+def save_user_profile(data):
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM workouts WHERE user_id = 1 AND completed = 0 ORDER BY id DESC LIMIT 1")
-    workout_row = cursor.fetchone()
     
-    if not workout_row:
-        st.info("Nenhum treino ativo no momento.")
-        if st.button("Gerar Próximo Treino"):
-            plan = generate_workout(profile)
-            save_generated_workout(1, plan)
-            st.success("Gerado!")
-            st.rerun()
-    else:
-        st.subheader(f"Sessão: {workout_row['workout_name']}")
+    cursor.execute("SELECT id FROM users LIMIT 1")
+    user = cursor.fetchone()
+    
+    if user:
         cursor.execute("""
-            SELECT we.id as we_id, e.name, we.target_sets, we.target_reps, we.rest_time 
-            FROM workout_exercises we JOIN exercises e ON we.exercise_id = e.id
-            WHERE we.workout_id = ?
+            UPDATE users SET 
+                name = ?, age = ?, sex = ?, weight = ?, height = ?, 
+                goal = ?, experience = ?, frequency = ?, duration = ?, 
+                equipment = ?, sleep_quality = ?, disposition = ?, 
+                recovery_quality = ?, restrictions = ?, terms_accepted = ?
+            WHERE id = ?
+        """, (
+            data["name"], data["age"], data["sex"], data["weight"], data["height"],
+            data["goal"], data["experience"], data["frequency"], data["duration"], data["equipment"],
+            data["sleep_quality"], data["disposition"], data["recovery_quality"], data["restrictions"], 
+            data["terms_accepted"], user["id"]
+        ))
+    else:
+        cursor.execute("""
+            INSERT INTO users (name, age, sex, weight, height, goal, experience, frequency, duration, equipment, sleep_quality, disposition, recovery_quality, restrictions, terms_accepted)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            data["name"], data["age"], data["sex"], data["weight"], data["height"],
+            data["goal"], data["experience"], data["frequency"], data["duration"], data["equipment"],
+            data["sleep_quality"], data["disposition"], data["recovery_quality"], data["restrictions"], data["terms_accepted"]
+        ))
+        
+    conn.commit()
+    conn.close()
+
+def get_user_profile():
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM users LIMIT 1")
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+def add_body_metric(user_id, date, weight):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO body_metrics (user_id, date, weight) VALUES (?, ?, ?)", (user_id, date, weight))
+    cursor.execute("UPDATE users SET weight = ? WHERE id = ?", (weight, user_id))
+    conn.commit()
+    conn.close()
+
+def get_body_metrics(user_id):
+    conn = get_connection()
+    df = pd.read_sql_query("SELECT * FROM body_metrics WHERE user_id = ? ORDER BY date ASC", conn, params=(user_id,))
+    conn.close()
+    return df
         """, (workout_row["id"],))
         for ex in cursor.fetchall():
             with st.expander(f"🔹 {ex['name']} | Séries: {ex['target_sets']} | Reps: {ex['target_reps']}"):
