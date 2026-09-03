@@ -1,4 +1,5 @@
 import streamlit as st
+import pandas as pd
 import datetime
 from database import init_db, get_connection, get_analytics_summary
 from models import save_user_profile, get_user_profile, add_body_metric, get_body_metrics
@@ -9,15 +10,17 @@ st.set_page_config(page_title="AI FIT ELITE", page_icon="⚡", layout="wide")
 
 init_db()
 
-# Garante que o perfil seja lido logo no início do app
+# Garante que o perfil seja lido e o estado seja forçado corretamente
 profile = get_user_profile()
 
 if "sistema_liberado" not in st.session_state:
     st.session_state.sistema_liberado = bool(profile and profile.get("terms_accepted"))
+elif profile and profile.get("terms_accepted"):
+    st.session_state.sistema_liberado = True
 
 st.sidebar.title("⚡ AI FIT ELITE")
 
-if not st.sidebar.sistema_liberado if hasattr(st.sidebar, 'sistema_liberado') else not st.session_state.sistema_liberado:
+if not st.session_state.sistema_liberado:
     st.sidebar.warning("⚠️ Conclua o Perfil e Anamnese para liberar o sistema.")
     menu = "Meu Perfil"
 else:
@@ -135,8 +138,9 @@ elif menu == "Meu Perfil":
                     "disposition": disposition, "recovery_quality": recovery, "restrictions": restrictions,
                     "terms_accepted": 1
                 })
+                # Altera o estado na sessão e força o redirecionamento automático para o Dashboard
                 st.session_state.sistema_liberado = True
-                st.success("Salvo com sucesso! Avançando para a próxima etapa...")
+                st.success("Salvo com sucesso! Liberando o sistema...")
                 st.rerun()
 
 elif menu == "Treino de Hoje":
