@@ -12,6 +12,9 @@ def init_db():
     conn = get_connection()
     cursor = conn.cursor()
 
+    # Recria a tabela com todas as colunas de anamnese e termos obrigatórios
+    cursor.execute("DROP TABLE IF EXISTS users;")
+    
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
