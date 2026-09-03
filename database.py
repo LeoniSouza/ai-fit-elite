@@ -1,0 +1,123 @@
+import sqlite3
+import pandas as pd
+from exercise_library import get_initial_exercises
+
+DB_NAME = "ai_fit.db"
+
+def get_connection():
+    conn = sqlite3.connect(DB_NAME, check_same_thread=False)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+def init_db():
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            age INTEGER,
+            sex TEXT,
+            weight REAL,
+            height REAL,
+            goal TEXT,
+            experience TEXT,
+            frequency INTEGER,
+            duration INTEGER,
+            equipment TEXT
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS goals (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            target_weight REAL,
+            target_date TEXT,
+            FOREIGN KEY (user_id) REFERENCES users (id)
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS body_metrics (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            date TEXT,
+            weight REAL,
+            FOREIGN KEY (user_id) REFERENCES users (id)
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS exercises (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            muscle_group TEXT,
+            equipment TEXT,
+            movement_pattern TEXT,
+            level TEXT,
+            goal TEXT,
+            instructions TEXT,
+            suggested_sets INTEGER,
+            rep_range TEXT,
+            rest_time TEXT,
+            progression_possible TEXT
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS workouts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            date TEXT,
+            workout_name TEXT,
+            completed INTEGER DEFAULT 0,
+            FOREIGN KEY (user_id) REFERENCES users (id)
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS workout_exercises (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            workout_id INTEGER,
+            exercise_id INTEGER,
+            target_sets INTEGER,
+            target_reps TEXT,
+            target_rir TEXT,
+            rest_time TEXT,
+            FOREIGN KEY (workout_id) REFERENCES workouts (id),
+            FOREIGN KEY (exercise_id) REFERENCES exercises (id)
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS sets_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            workout_exercise_id INTEGER,
+            set_number INTEGER,
+            weight REAL,
+            reps INTEGER,
+            rir REAL,
+            rpe REAL,
+            FOREIGN KEY (workout_exercise_id) REFERENCES workout_exercises (id)
+        )
+    """)
+
+    conn.commit()
+
+    cursor.execute("SELECT COUNT(*) FROM exercises")
+    if cursor.fetchone()[0] == 0:
+        exercises = get_initial_exercises()
+        for ex in exercises:
+            cursor.execute("""
+                INSERT INTO exercises (name, muscle_group, equipment, movement_pattern, level, goal, instructions, suggested_sets, rep_range, rest_time, progression_possible)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                ex["name"], ex["muscle_group"], ex["equipment"], ex["movement_pattern"],
+                ex["level"], ex["goal"], ex["instructions"], ex["suggested_sets"],
+                ex["rep_range"], ex["rest_time"], ex["progression_possible"]
+            ))
+        conn.commit()
+
+    conn.close()
